@@ -21,7 +21,8 @@ exports.sourceNodes = async ({
   authToken,
   contentFields,
   pages,
-  pageTypes
+  pageTypes,
+  locale = "en"
 }) => {
   const {
     createNode,
@@ -177,7 +178,8 @@ exports.sourceNodes = async ({
       try {
         for (let i = 0; i < pages.length; i++) {
           const pageResult = await api.page.retrieve('*', pages[i], {
-            preview: 1
+            preview: 1,
+            locale: locale
           });
           pagesResult.push(pageResult.data.data);
         }
@@ -192,10 +194,12 @@ exports.sourceNodes = async ({
         for (let i = 0; i < pageTypes.length; i++) {
           const pageTypeResult = await api.page.list(pageTypes[i], {
             page_size: Number.MAX_SAFE_INTEGER,
-            preview: 1
+            preview: 1,
+            locale: locale
           });
           pageTypeResult.data.data.forEach(page => {
             // allButterPage(filter: {page_type: {eq: "page_type"}})
+            page.fields.locale = locale;
             page.fields.page_type = pageTypes[i];
             pagesResult.push(page);
           });
@@ -222,7 +226,6 @@ exports.sourceNodes = async ({
             .digest(`hex`)
         }
       });
-
       createNode(gatsbyPage);
     });
   }
