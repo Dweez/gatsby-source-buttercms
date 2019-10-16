@@ -31,6 +31,11 @@ module.exports = {
         // Optional. Array of page types.
         pageTypes: [
           'page_type'
+        ],
+        // Optional. Array of declared pages locales.
+        locales: [
+          'fr',
+          'en'
         ]
       }
     }

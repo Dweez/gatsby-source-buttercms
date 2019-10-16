@@ -22,7 +22,7 @@ exports.sourceNodes = async ({
   contentFields,
   pages,
   pageTypes,
-  locale = "en"
+  locales
 }) => {
   const {
     createNode,
@@ -177,11 +177,21 @@ exports.sourceNodes = async ({
     if (pages) {
       try {
         for (let i = 0; i < pages.length; i++) {
-          const pageResult = await api.page.retrieve('*', pages[i], {
-            preview: 1,
-            locale: locale
-          });
-          pagesResult.push(pageResult.data.data);
+          if( locales && locales.length ) {
+            for (let j = 0; j < locales.length; j++) {
+              const pageResult = await api.page.retrieve('*', pages[i], {
+                preview: 1,
+                locale: locales[j]
+              });
+              pageResult.data.data.fields.locale = locales[j];
+              pagesResult.push(pageResult.data.data);
+            }
+          }else{
+            const pageResult = await api.page.retrieve('*', pages[i], {
+              preview: 1
+            });
+            pagesResult.push(pageResult.data.data);
+          }
         }
       } catch (err) {
         console.log('Error fetching pages', err);
@@ -192,17 +202,34 @@ exports.sourceNodes = async ({
     if (pageTypes) {
       try {
         for (let i = 0; i < pageTypes.length; i++) {
-          const pageTypeResult = await api.page.list(pageTypes[i], {
-            page_size: Number.MAX_SAFE_INTEGER,
-            preview: 1,
-            locale: locale
-          });
-          pageTypeResult.data.data.forEach(page => {
-            // allButterPage(filter: {page_type: {eq: "page_type"}})
-            page.fields.locale = locale;
-            page.fields.page_type = pageTypes[i];
-            pagesResult.push(page);
-          });
+          if( locales && locales.length ) {
+            for (let j = 0; j < locales.length; j++) {
+              const pageTypeResult = await api.page.list(pageTypes[i], {
+                page_size: Number.MAX_SAFE_INTEGER,
+                preview: 1,
+                locale: locales[j]
+              });
+              pageTypeResult.data.data.forEach(page => {
+                // allButterPage(filter: {page_type: {eq: "page_type"}})
+                page.fields.locale = locales[j];
+                page.fields.page_type = pageTypes[i];
+                pagesResult.push(page);
+              });
+            }
+          } else {
+            const pageTypeResult = await api.page.list(pageTypes[i], {
+              page_size: Number.MAX_SAFE_INTEGER,
+              preview: 1,
+              // locale: ""
+            });
+            pageTypeResult.data.data.forEach(page => {
+              // allButterPage(filter: {page_type: {eq: "page_type"}})
+              // page.fields.locale = "";
+              page.fields.page_type = pageTypes[i];
+              pagesResult.push(page);
+            });
+          }
+
         }
       } catch (err) {
         console.log('Error fetching page types', err);
@@ -211,10 +238,14 @@ exports.sourceNodes = async ({
 
     pagesResult.forEach(page => {
       const data = Object.assign({
+        // slug: `${page.fields.locale}/${page.slug}`
         slug: page.slug
       }, page.fields);
+
+      const gatsbyId = (locales && locales.length) ? `${page.fields.locale}/${page.slug}` : page.slug;
+
       const gatsbyPage = Object.assign(data, {
-        id: createNodeId(page.slug),
+        id: createNodeId(gatsbyId),
         parent: null,
         children: [],
         internal: {
@@ -228,6 +259,7 @@ exports.sourceNodes = async ({
       });
       createNode(gatsbyPage);
     });
+
   }
 
   setPluginStatus({
